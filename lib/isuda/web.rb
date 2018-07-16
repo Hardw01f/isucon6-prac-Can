@@ -90,7 +90,7 @@ module Isuda
       end
 
       def htmlify(content)
-        keywords = db.xquery(%| select * from entry order by character_length(keyword) desc |)
+        keywords = db.xquery(%| select keyword from entry order by character_length(keyword) desc |)
         pattern = keywords.map {|k| Regexp.escape(k[:keyword]) }.join('|')
         kw2hash = {}
         hashed_content = content.gsub(/(#{pattern})/) {|m|
@@ -198,7 +198,7 @@ module Isuda
 
     post '/login' do
       name = params[:name]
-      user = db.xquery(%| select * from user where name = ? limit 1 |, name).first
+      user = db.xquery(%| select id,password,salt from user where name = ? limit 1 |, name).first
       halt(403) unless user
       halt(403) unless user[:password] == encode_with_salt(password: params[:password], salt: user[:salt])
 
@@ -248,7 +248,7 @@ module Isuda
       is_delete = params[:delete] or halt(400)
 
       # NOTE: ここもlimitつけても良さそう
-      unless db.xquery(%| SELECT * FROM entry WHERE keyword = ? limit 1 |, keyword).first
+      unless db.xquery(%| SELECT keyword FROM entry WHERE keyword = ? limit 1 |, keyword).first
         halt(404)
       end
 
