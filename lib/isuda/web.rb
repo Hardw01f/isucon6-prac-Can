@@ -113,12 +113,11 @@ module Isuda
         Rack::Utils.escape_path(str)
       end
 
-      def load_stars(keyword)
+      def load_stars
         # NOTE: ajax的な処理だと思われる
         # NOTE: キーワードごとに取るのではなくて、全ての物を一括で取ってあげるようにする
         isutar_url = URI(settings.isutar_origin)
         isutar_url.path = '/stars'
-        isutar_url.query = URI.encode_www_form(keyword: keyword)
         body = Net::HTTP.get(isutar_url)
         stars_res = JSON.parse(body)
         stars_res['stars']
@@ -149,9 +148,15 @@ module Isuda
         LIMIT #{per_page}
         OFFSET #{per_page * (page - 1)}
       |)
+
+      all_stars = load_stars.to_a
       entries.each do |entry|
         entry[:html] = htmlify(entry[:description])
-        entry[:stars] = load_stars(entry[:keyword])
+        tmp = []
+        all_stars.each do |star|
+          tmp << star if star[:keyword] == entry[:keyword]
+        end
+        entry[:stars] = tmp
       end
 
       total_entries = db.xquery(%| SELECT count(*) AS total_entries FROM entry |).first[:total_entries].to_i
