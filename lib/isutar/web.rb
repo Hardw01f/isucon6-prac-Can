@@ -51,7 +51,7 @@ module Isutar
     get '/stars' do
       # NOTE: キーワードごとではなくて全部返してあげればよいかな？
       # keyword = params[:keyword] || ''
-      stars = db.xquery(%| select * from star|).to_a
+      stars = db.xquery(%| select * from star |).to_a
 
       content_type :json
       JSON.generate(stars: stars)
