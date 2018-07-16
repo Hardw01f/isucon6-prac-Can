@@ -100,7 +100,6 @@ module Isuda
           end
         }
         escaped_content = Rack::Utils.escape_html(hashed_content)
-        # NOTE: ここでurlの生成を行なっている？？
         kw2hash.each do |(keyword, hash)|
           keyword_url = url("/keyword/#{Rack::Utils.escape_path(keyword)}")
           anchor = '<a href="%s">%s</a>' % [keyword_url, Rack::Utils.escape_html(keyword)]
@@ -113,9 +112,7 @@ module Isuda
         Rack::Utils.escape_path(str)
       end
 
-      def load_stars
-        # NOTE: ajax的な処理だと思われる
-        # NOTE: キーワードごとに取るのではなくて、全ての物を一括で取ってあげるようにする
+      def load_stars(keyword)
         isutar_url = URI(settings.isutar_origin)
         isutar_url.path = '/stars'
         body = Net::HTTP.get(isutar_url)
@@ -149,14 +146,14 @@ module Isuda
         OFFSET #{per_page * (page - 1)}
       |)
 
-      all_stars = load_stars.to_a
+      # all_stars = load_stars.to_a
+      # tmp = []
+      # all_stars.each do |star|
+      #   tmp << star if star[:keyword] == entry[:keyword]
+      # end
       entries.each do |entry|
         entry[:html] = htmlify(entry[:description])
-        tmp = []
-        all_stars.each do |star|
-          tmp << star if star[:keyword] == entry[:keyword]
-        end
-        entry[:stars] = tmp
+        entry[:stars] = load_stars(entry[:keyword])
       end
 
       total_entries = db.xquery(%| SELECT count(*) AS total_entries FROM entry |).first[:total_entries].to_i
@@ -223,7 +220,6 @@ module Isuda
       description = params[:description]
       halt(400) if is_spam_content(description) || is_spam_content(keyword)
 
-      # NOTE: *2ってなに？
       bound = [@user_id, keyword, description] * 2
       db.xquery(%|
         INSERT INTO entry (author_id, keyword, description, created_at, updated_at)
@@ -237,7 +233,7 @@ module Isuda
 
     get '/keyword/:keyword', set_name: true do
       keyword = params[:keyword] or halt(400)
-      # NOTE: ここにlimitしてあげれば良さそう
+
       entry = db.xquery(%| select * from entry where keyword = ? |, keyword).first or halt(404)
       entry[:stars] = load_stars(entry[:keyword])
       entry[:html] = htmlify(entry[:description])
@@ -252,7 +248,6 @@ module Isuda
       keyword = params[:keyword] or halt(400)
       is_delete = params[:delete] or halt(400)
 
-      # NOTE: ここもlimitつけても良さそう
       unless db.xquery(%| SELECT * FROM entry WHERE keyword = ? |, keyword).first
         halt(404)
       end
