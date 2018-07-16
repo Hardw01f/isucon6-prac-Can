@@ -154,7 +154,7 @@ module Isuda
         entry[:stars] = load_stars(entry[:keyword])
       end
 
-      total_entries = db.xquery(%| SELECT count(*) AS total_entries FROM entry |).first[:total_entries].to_i
+      total_entries = db.xquery(%| SELECT count(id) AS total_entries FROM entry |).first[:total_entries].to_i
 
       last_page = (total_entries.to_f / per_page.to_f).ceil
       from = [1, page - 5].max
@@ -198,7 +198,7 @@ module Isuda
 
     post '/login' do
       name = params[:name]
-      user = db.xquery(%| select * from user where name = ? |, name).first
+      user = db.xquery(%| select * from user where name = ? limit 1 |, name).first
       halt(403) unless user
       halt(403) unless user[:password] == encode_with_salt(password: params[:password], salt: user[:salt])
 
@@ -233,7 +233,7 @@ module Isuda
     get '/keyword/:keyword', set_name: true do
       keyword = params[:keyword] or halt(400)
       # NOTE: ここにlimitしてあげれば良さそう
-      entry = db.xquery(%| select * from entry where keyword = ? |, keyword).first or halt(404)
+      entry = db.xquery(%| select * from entry where keyword = ? limit 1 |, keyword).first or halt(404)
       entry[:stars] = load_stars(entry[:keyword])
       entry[:html] = htmlify(entry[:description])
 
@@ -248,7 +248,7 @@ module Isuda
       is_delete = params[:delete] or halt(400)
 
       # NOTE: ここもlimitつけても良さそう
-      unless db.xquery(%| SELECT * FROM entry WHERE keyword = ? |, keyword).first
+      unless db.xquery(%| SELECT * FROM entry WHERE keyword = ? limit 1 |, keyword).first
         halt(404)
       end
 
