@@ -100,6 +100,7 @@ module Isuda
           end
         }
         escaped_content = Rack::Utils.escape_html(hashed_content)
+        # NOTE: ここでurlの生成を行なっている？？
         kw2hash.each do |(keyword, hash)|
           keyword_url = url("/keyword/#{Rack::Utils.escape_path(keyword)}")
           anchor = '<a href="%s">%s</a>' % [keyword_url, Rack::Utils.escape_html(keyword)]
@@ -113,6 +114,8 @@ module Isuda
       end
 
       def load_stars(keyword)
+        # NOTE: ajax的な処理だと思われる
+        # NOTE: キーワードごとに取るのではなくて、全ての物を一括で取ってあげるようにする
         isutar_url = URI(settings.isutar_origin)
         isutar_url.path = '/stars'
         isutar_url.query = URI.encode_www_form(keyword: keyword)
@@ -215,6 +218,7 @@ module Isuda
       description = params[:description]
       halt(400) if is_spam_content(description) || is_spam_content(keyword)
 
+      # NOTE: *2ってなに？
       bound = [@user_id, keyword, description] * 2
       db.xquery(%|
         INSERT INTO entry (author_id, keyword, description, created_at, updated_at)
@@ -228,7 +232,7 @@ module Isuda
 
     get '/keyword/:keyword', set_name: true do
       keyword = params[:keyword] or halt(400)
-
+      # NOTE: ここにlimitしてあげれば良さそう
       entry = db.xquery(%| select * from entry where keyword = ? |, keyword).first or halt(404)
       entry[:stars] = load_stars(entry[:keyword])
       entry[:html] = htmlify(entry[:description])
@@ -243,6 +247,7 @@ module Isuda
       keyword = params[:keyword] or halt(400)
       is_delete = params[:delete] or halt(400)
 
+      # NOTE: ここもlimitつけても良さそう
       unless db.xquery(%| SELECT * FROM entry WHERE keyword = ? |, keyword).first
         halt(404)
       end
